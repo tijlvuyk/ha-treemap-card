@@ -20,6 +20,7 @@ interface HaTextfield extends HTMLElement {
  */
 interface HaSelect extends HTMLElement {
   value: string;
+  options?: { value: string; label: string }[];
 }
 
 /**
@@ -56,6 +57,7 @@ class MockHaTextfield extends HTMLElement {
  */
 class MockHaSelect extends HTMLElement {
   private _value = '';
+  options: { value: string; label: string }[] = [];
 
   get value(): string {
     return this._value;
@@ -220,6 +222,31 @@ describe('TreemapCardEditor', () => {
 
       const content = editor.shadowRoot?.textContent ?? '';
       expect(content).toContain('YAML only');
+    });
+  });
+
+  describe('select inputs', () => {
+    it('uses Home Assistant options and applies a selected event value', async () => {
+      editor.setConfig({
+        type: 'custom:treemap-card',
+        entities: ['sensor.*'],
+      });
+      await editor.updateComplete;
+
+      const select = getElement(editor, '[data-testid="data-section"] ha-select');
+      if (!isHaSelect(select)) throw new Error('Expected sort select');
+
+      expect(select.options).toEqual([
+        { value: 'value', label: 'Value (optimal layout)' },
+        { value: 'entity_id', label: 'Entity ID' },
+        { value: 'label', label: 'Label' },
+        { value: 'default', label: 'Config order' },
+      ]);
+
+      const configChanged = waitForConfigChange(editor);
+      select.dispatchEvent(new CustomEvent('selected', { detail: { value: 'label' } }));
+
+      await expect(configChanged).resolves.toMatchObject({ sort_by: 'label' });
     });
   });
 
